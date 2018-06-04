@@ -130,6 +130,11 @@ Tile * Tile::Right()
 	return 0;
 }
 
+Tile* Tile::GetConnections(int a_num)
+{
+	return m_connections[a_num];
+}
+
 void Tile::SetGScore(float a_value)
 {
 	m_gScore = a_value;

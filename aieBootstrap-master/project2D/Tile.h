@@ -28,6 +28,8 @@ public:
 	Tile* Left();
 	Tile* Right();
 
+	Tile* GetConnections(int a_num);
+
 	void SetGScore(float a_value);
 	void SetHScore(float a_value);
 	void SetFScore(float a_value);

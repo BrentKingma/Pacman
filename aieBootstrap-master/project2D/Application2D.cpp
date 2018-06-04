@@ -17,20 +17,21 @@ bool Application2D::startup() {
 	
 	m_2dRenderer = new aie::Renderer2D();
 
-	m_fourWay = new aie::Texture("./textures/fourWay.png");
-	m_straightDown = new aie::Texture("./textures/straightDown.png");
-	m_straightLeft = new aie::Texture("./textures/straightLeft.png");
-	m_straightRight = new aie::Texture("./textures/straightRight.png");
-	m_straightUp = new aie::Texture("./textures/straightUp.png");
-	m_rightTopCorner = new aie::Texture("./textures/topRightCorner.png");
-	m_leftTopCorner = new aie::Texture("./textures/topLeftCorner.png");
-	m_rightBottomCorner = new aie::Texture("./textures/bottomRightCorner.png");
-	m_leftBottomCorner = new aie::Texture("./textures/bottomLeftCorner.png");
-	m_horizontal = new aie::Texture("./textures/horizontalPath.png");
-	m_vertical = new aie::Texture("./textures/verticlePath.png");
-	m_grass = new aie::Texture("./textures/grass.png");
-	m_sand = new aie::Texture("./textures/sand.png");
-	m_playerTexture = new aie::Texture("./textures/player.png");
+	m_fourWay = new aie::Texture("./bin/textures/fourWay.png");
+	m_straightDown = new aie::Texture("./bin/textures/straightDown.png");
+	m_straightLeft = new aie::Texture("./bin/textures/straightLeft.png");
+	m_straightRight = new aie::Texture("./bin/textures/straightRight.png");
+	m_straightUp = new aie::Texture("./bin/textures/straightUp.png");
+	m_rightTopCorner = new aie::Texture("./bin/textures/topRightCorner.png");
+	m_leftTopCorner = new aie::Texture("./bin/textures/topLeftCorner.png");
+	m_rightBottomCorner = new aie::Texture("./bin/textures/bottomRightCorner.png");
+	m_leftBottomCorner = new aie::Texture("./bin/textures/bottomLeftCorner.png");
+	m_horizontal = new aie::Texture("./bin/textures/horizontalPath.png");
+	m_vertical = new aie::Texture("./bin/textures/verticlePath.png");
+	m_grass = new aie::Texture("./bin/textures/grass.png");
+	m_sand = new aie::Texture("./bin/textures/sand.png");
+	m_playerTexture = new aie::Texture("./bin/textures/player.png");
+	m_enemyTexture = new aie::Texture("./bin/textures/enemy.png");
 
 	m_font = new aie::Font("./font/consolas.ttf", 32);
 
@@ -56,6 +57,7 @@ bool Application2D::startup() {
 	SetupMap();
 	ConnectTiles();
 	m_player = new Player({ startPointX, startPointY }, m_playerTexture);
+	m_enemy = new Enemy(m_tiles[11][13]->GetPosition(), m_enemyTexture);
 	
 	m_cameraX = 0;
 	m_cameraY = 0;
@@ -101,6 +103,16 @@ void Application2D::update(float deltaTime) {
 
 	// input example
 	aie::Input* input = aie::Input::getInstance();
+
+	
+
+	if (test == true)
+	{
+		AStar(GetTileAtEnemyPosition(m_enemy), GetTileAtPlayerPosition(m_player), m_enemy);
+		test = false;
+	}
+
+	m_enemy->update(deltaTime);
 
 	if (m_moveQue[0] == 1)
 	{
@@ -275,6 +287,7 @@ void Application2D::draw()
 	}
 
 	m_2dRenderer->drawSprite(m_playerTexture, m_player->GetPosition().x, m_player->GetPosition().y);
+	m_enemy->draw(m_2dRenderer);
 	
 	// output some text, uses the last used colour
 	char fps[32];
@@ -947,29 +960,61 @@ void Application2D::ConnectTiles()
 
 void Application2D::AStar(Tile* a_starting, Tile* a_target, Enemy* a_enemy)
 {
-	std::vector<Tile> tempList;
-	std::vector<Tile> closedList;
+	std::vector<Tile*> openList;
+	std::vector<Tile*> closedList;
+	openList.push_back(a_starting);
+	
+	Tile* currentTile;
 
-	tempList.push_back(*a_starting);
-
-	while (tempList.size() > 0)
+	while (openList.size() > 0)
 	{
-		Tile currentTile = tempList[0];
-		currentTile.SetHScore(GetChebyshevDistance(currentTile, *a_target));
-		for (int i = 0; i < tempList.size(); i++)
+		currentTile = openList[0];
+		currentTile->SetHScore(GetChebyshevDistance(*currentTile, *a_target));
+		for (int i = 0; i < openList.size(); i++)
 		{
-			if (tempList[i].GetFScore() < currentTile.GetFScore() || (tempList[i].GetFScore() == currentTile.GetFScore() && tempList[i].GetFScore() < currentTile.GetFScore()))
+			if (openList[i]->GetFScore() < currentTile->GetFScore() || (openList[i]->GetFScore() == currentTile->GetFScore() && openList[i]->GetFScore() < currentTile->GetFScore()))
 			{
-				currentTile = tempList[i];
+				currentTile = openList[i];
 			}
 		}
 
 		closedList.push_back(currentTile);
-		tempList.pop_back();
-
-		if (&currentTile == a_target)
+		for (int i = 0; i < openList.size(); i++)
 		{
+			if (openList[i] == currentTile)
+			{
+				openList.erase(openList.begin() + i);
+			}
+		}
 
+		if (currentTile == a_target)
+		{
+			a_enemy->SetPath(RetracePath(a_starting, a_target));
+			break;
+		}
+
+
+
+		for (int i = 0; i < 4; i++)
+		{
+			Tile* neighbour = currentTile->GetConnections(i);
+			if (neighbour == nullptr || Contains(closedList, neighbour))
+			{
+				continue;
+			}
+
+			float newMovementCost = currentTile->GetGScore() + 1;
+			if (newMovementCost < currentTile->GetConnections(i)->GetGScore() || !Contains(openList, currentTile->GetConnections(i)))
+			{
+				currentTile->GetConnections(i)->SetGScore(newMovementCost);
+				currentTile->GetConnections(i)->SetHScore(GetChebyshevDistance(*currentTile->GetConnections(i), *a_target));
+				currentTile->GetConnections(i)->SetParent(currentTile);
+
+				if (!Contains(openList, currentTile->GetConnections(i)))
+				{
+					openList.push_back(currentTile->GetConnections(i));
+				}
+			}
 		}
 	}
 }
@@ -982,18 +1027,60 @@ float Application2D::GetChebyshevDistance(Tile a, Tile b)
 	return 10 * (dx + dy) + (14 - 2 * 10) * std::min(dx, dy);
 }
 
-void Application2D::RetracePath(Tile start, Tile end)
+std::vector<Tile> Application2D::RetracePath(Tile* start, Tile* end)
 {
 	std::vector<Tile> path;
-	Tile current = end;
+	Tile* current = end;
 
-	while (&current != &start)
+	while (current != nullptr)
 	{
-		path.push_back(current);
-		current = *current.GetParent();
+		path.push_back(*current);
+		current = current->GetParent();
 	}
 
-	path.
+	std::reverse(path.begin(), path.end());
+
+	return path;
+}
+
+bool Application2D::Contains(std::vector<Tile*> a_list, Tile* a_tile)
+{
+	for (int i = 0; i < a_list.size(); i++)
+	{
+		if (a_list[i] == a_tile)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+Tile* Application2D::GetTileAtEnemyPosition(Enemy * a_enemy)
+{
+	for (int y = 0; y < 23; y++)
+	{
+		for (int x = 0; x < 25; x++)
+		{
+			if (m_tiles[y][x]->GetPosition() == a_enemy->GetPosition())
+			{
+				return m_tiles[y][x];
+			}
+		}
+	}
+}
+
+Tile * Application2D::GetTileAtPlayerPosition(Player * a_player)
+{
+	for (int y = 0; y < 23; y++)
+	{
+		for (int x = 0; x < 25; x++)
+		{
+			if (m_tiles[y][x]->GetPosition() == a_player->GetPosition())
+			{
+				return m_tiles[y][x];
+			}
+		}
+	}
 }
 
 

@@ -36,12 +36,14 @@ protected:
 	aie::Texture* m_grass;
 	aie::Texture* m_sand;
 	aie::Texture* m_playerTexture;
+	aie::Texture* m_enemyTexture;
 
 	aie::Font*			m_font;
 
 	Tile* m_tiles[24][23];
 
 	Player* m_player;
+	Enemy* m_enemy;
 
 	glm::vec2 m_left;
 	glm::vec2 m_right;
@@ -66,13 +68,14 @@ protected:
 	int startPointY;
 	int pictureWidth;
 	int pictureHeight;
-
+	bool test = true;
 
 	void SetupMap();
 	void ConnectTiles();
 	void AStar(Tile* a_starting, Tile* a_target, Enemy* a_enemy);
 	float GetChebyshevDistance(Tile a, Tile b);
-	void RetracePath(Tile start, Tile end);
-
-
+	std::vector<Tile> RetracePath(Tile* start, Tile* end);
+	bool Contains(std::vector<Tile*> a_list, Tile* a_tile);
+	Tile* GetTileAtEnemyPosition(Enemy* a_enemy);
+	Tile* GetTileAtPlayerPosition(Player* a_player);
 };
